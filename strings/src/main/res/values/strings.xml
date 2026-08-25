@@ -179,4 +179,11 @@
     <string name="monet" translatable="false">Monet</string>
     <string name="share_logs">Share logs</string>
     <string name="case_sensitive">Case sensitive</string>
+    <string name="all_apps">All</string>
+    <string name="user_apps">User apps</string>
+    <string name="system_apps">System apps</string>
+    <string name="clear_all">Clear all</string>
+    <string name="quick_export">Quick export</string>
+    <string name="filter_by_apps">Filter by apps</string>
+    <string name="share_recording">Share recording</string>
 </resources>

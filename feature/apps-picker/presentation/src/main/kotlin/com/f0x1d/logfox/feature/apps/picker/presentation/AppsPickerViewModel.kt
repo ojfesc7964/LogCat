@@ -1,6 +1,7 @@
 package com.f0x1d.logfox.feature.apps.picker.presentation
 
 import com.f0x1d.logfox.core.tea.BaseStoreViewModel
+import com.f0x1d.logfox.feature.apps.picker.api.AppFilterCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -16,6 +17,7 @@ internal class AppsPickerViewModel @Inject constructor(
         checkedAppPackageNames = emptySet(),
         searchedApps = emptyList(),
         multiplySelectionEnabled = true,
+        selectedCategory = AppFilterCategory.ALL,
         isLoading = true,
         searchActive = false,
         query = "",

@@ -135,6 +135,30 @@ internal class LogsReducer @Inject constructor() : Reducer<LogsState, LogsComman
             )
         }
 
+        is LogsCommand.QuickExportSelectedClicked -> {
+            state.withSideEffects(
+                LogsSideEffect.PrepareQuickShareLogs(
+                    lines = state.selectedLines(),
+                ),
+            )
+        }
+
+        is LogsCommand.QuickExportCurrentLogsClicked -> {
+            state.withSideEffects(
+                LogsSideEffect.PrepareQuickShareLogs(
+                    lines = state.logs,
+                ),
+            )
+        }
+
+        is LogsCommand.ShareFileReady -> {
+            state.withSideEffects(
+                LogsSideEffect.ShareFile(
+                    file = command.file,
+                ),
+            )
+        }
+
         is LogsCommand.SwitchState -> {
             state.copy(
                 paused = !state.paused,

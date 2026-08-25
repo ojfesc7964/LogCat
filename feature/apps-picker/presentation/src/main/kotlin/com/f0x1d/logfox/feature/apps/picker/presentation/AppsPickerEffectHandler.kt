@@ -28,7 +28,7 @@ internal class AppsPickerEffectHandler @Inject constructor(
 
             is AppsPickerSideEffect.FilterApps -> {
                 val filteredApps = withContext(defaultDispatcher) {
-                    filterAppsUseCase(effect.query, effect.apps)
+                    filterAppsUseCase(effect.query, effect.apps, effect.category)
                 }
                 onCommand(AppsPickerCommand.SearchedAppsUpdated(filteredApps))
             }
@@ -36,6 +36,7 @@ internal class AppsPickerEffectHandler @Inject constructor(
             // UI side effects are handled by Fragment
             is AppsPickerSideEffect.PopBackStack -> Unit
             is AppsPickerSideEffect.HandleAppSelection -> Unit
+            is AppsPickerSideEffect.HandleAppsChecked -> Unit
         }
     }
 }

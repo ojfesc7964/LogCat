@@ -47,5 +47,28 @@ internal class FiltersReducer @Inject constructor() : Reducer<FiltersState, Filt
         is FiltersCommand.CreateNewFilter -> {
             state.withSideEffects(FiltersSideEffect.NavigateToCreateFilter)
         }
+
+        is FiltersCommand.OpenAppsFilter -> {
+            state.withSideEffects(FiltersSideEffect.NavigateToAppsPicker)
+        }
+
+        is FiltersCommand.ToggleAppFilter -> {
+            state.withSideEffects(
+                FiltersSideEffect.ToggleAppFilter(
+                    title = command.title,
+                    packageName = command.packageName,
+                    checked = command.checked,
+                ),
+            )
+        }
+
+        is FiltersCommand.ToggleMultipleAppsFilter -> {
+            state.withSideEffects(
+                FiltersSideEffect.ToggleMultipleAppsFilter(
+                    apps = command.apps,
+                    checked = command.checked,
+                ),
+            )
+        }
     }
 }

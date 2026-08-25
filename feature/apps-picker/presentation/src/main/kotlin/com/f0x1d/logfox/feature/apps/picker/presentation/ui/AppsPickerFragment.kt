@@ -39,6 +39,9 @@ class AppsPickerFragment : Fragment() {
             onAppChecked = { app, checked -> resultHandler?.onAppChecked(app, checked) },
             onSearchActiveChanged = { viewModel.send(AppsPickerCommand.SearchActiveChanged(it)) },
             onQueryChanged = { viewModel.send(AppsPickerCommand.QueryChanged(it)) },
+            onCategoryChanged = { viewModel.send(AppsPickerCommand.CategoryChanged(it)) },
+            onSelectAllClicked = { viewModel.send(AppsPickerCommand.SelectAllInCurrentView(it)) },
+            onClearAllClicked = { viewModel.send(AppsPickerCommand.ClearAllInCurrentView(it)) },
         )
     }
 
@@ -78,6 +81,7 @@ class AppsPickerFragment : Fragment() {
                 checkedAppPackageNames = emptySet(),
                 searchedApps = emptyList(),
                 multiplySelectionEnabled = true,
+                selectedCategory = com.f0x1d.logfox.feature.apps.picker.api.AppFilterCategory.ALL,
                 isLoading = true,
                 searchActive = false,
                 query = "",
@@ -106,6 +110,10 @@ class AppsPickerFragment : Fragment() {
                 if (resultHandler?.onAppSelected(sideEffect.app) == true) {
                     findNavController().popBackStack()
                 }
+            }
+
+            is AppsPickerSideEffect.HandleAppsChecked -> {
+                resultHandler?.onAppsChecked(sideEffect.apps, sideEffect.checked)
             }
 
             // Business logic side effects are handled by EffectHandler

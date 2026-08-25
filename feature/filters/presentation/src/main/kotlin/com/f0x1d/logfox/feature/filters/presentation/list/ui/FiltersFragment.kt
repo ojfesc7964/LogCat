@@ -82,6 +82,9 @@ internal class FiltersFragment :
 
         toolbar.setupBackButtonForNavController()
         toolbar.menu.apply {
+            setClickListenerOn(R.id.filter_by_apps_item) {
+                send(FiltersCommand.OpenAppsFilter)
+            }
             setClickListenerOn(R.id.clear_item) {
                 showAreYouSureClearDialog {
                     send(FiltersCommand.ClearAll)
@@ -119,6 +122,10 @@ internal class FiltersFragment :
 
             is FiltersSideEffect.NavigateToCreateFilter -> {
                 findNavController().navigate(Directions.action_filtersFragment_to_editFilterFragment)
+            }
+
+            is FiltersSideEffect.NavigateToAppsPicker -> {
+                findNavController().navigate(Directions.action_filtersFragment_to_appsPickerFragment)
             }
 
             // Business logic side effects - handled by EffectHandler

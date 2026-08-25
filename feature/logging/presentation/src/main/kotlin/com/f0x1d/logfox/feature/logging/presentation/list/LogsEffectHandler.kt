@@ -1,5 +1,6 @@
 package com.f0x1d.logfox.feature.logging.presentation.list
 
+import android.content.Context
 import com.f0x1d.logfox.core.tea.EffectHandler
 import com.f0x1d.logfox.feature.datetime.api.DateTimeFormatter
 import com.f0x1d.logfox.feature.filters.api.domain.GetAllEnabledFiltersFlowUseCase
@@ -16,10 +17,13 @@ import com.f0x1d.logfox.feature.preferences.api.domain.logs.GetLogsTextSizeFlowU
 import com.f0x1d.logfox.feature.preferences.api.domain.logs.GetResumeLoggingWithBottomTouchFlowUseCase
 import com.f0x1d.logfox.feature.preferences.api.domain.service.GetLogFileExtensionUseCase
 import com.f0x1d.logfox.feature.recordings.api.domain.CreateRecordingFromLinesUseCase
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.combine
+import java.io.File
 import javax.inject.Inject
 
 internal class LogsEffectHandler @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val getLogsFlowUseCase: GetLogsFlowUseCase,
     private val getQueryFlowUseCase: GetQueryFlowUseCase,
     private val getCaseSensitiveFlowUseCase: GetCaseSensitiveFlowUseCase,
@@ -95,6 +99,17 @@ internal class LogsEffectHandler @Inject constructor(
             is LogsSideEffect.PrepareSaveCurrentLogs -> {
                 val filename = "${dateTimeFormatter.formatForExport(System.currentTimeMillis())}.${getLogFileExtensionUseCase()}"
                 onCommand(LogsCommand.SaveCurrentPickerReady(filename))
+            }
+
+            is LogsSideEffect.PrepareQuickShareLogs -> {
+                val cacheDir = File(context.cacheDir, "shared_logs").apply { if (!exists()) mkdirs() }
+                val cacheFile = File(
+                    cacheDir,
+                    "logs_${dateTimeFormatter.formatForExport(System.currentTimeMillis())}.${getLogFileExtensionUseCase()}",
+                )
+                val content = effect.lines.joinToString("\n") { formatLogLineUseCase(it) }
+                cacheFile.writeText(content)
+                onCommand(LogsCommand.ShareFileReady(cacheFile))
             }
 
             is LogsSideEffect.FormatAndCopyLog -> {

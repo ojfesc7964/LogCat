@@ -50,6 +50,10 @@
                 android:id="@+id/export_selected_item"
                 android:title="@string/export"
                 app:showAsAction="never" />
+            <item
+                android:id="@+id/quick_export_selected_item"
+                android:title="@string/quick_export"
+                app:showAsAction="never" />
         </menu>
     </item>
 
@@ -57,6 +61,12 @@
         android:id="@+id/save_current_log_item"
         android:icon="@drawable/ic_save"
         android:title="@string/save_all_logs"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/quick_export_current_log_item"
+        android:icon="@drawable/ic_share"
+        android:title="@string/quick_export"
         app:showAsAction="never" />
 
     <item

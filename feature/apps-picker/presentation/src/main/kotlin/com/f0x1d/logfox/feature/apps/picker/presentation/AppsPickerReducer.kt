@@ -30,6 +30,18 @@ internal class AppsPickerReducer @Inject constructor() : Reducer<AppsPickerState
                     AppsPickerSideEffect.FilterApps(
                         query = command.query,
                         apps = state.apps,
+                        category = state.selectedCategory,
+                    ),
+                )
+        }
+
+        is AppsPickerCommand.CategoryChanged -> {
+            state.copy(selectedCategory = command.category)
+                .withSideEffects(
+                    AppsPickerSideEffect.FilterApps(
+                        query = state.query,
+                        apps = state.apps,
+                        category = command.category,
                     ),
                 )
         }
@@ -37,9 +49,14 @@ internal class AppsPickerReducer @Inject constructor() : Reducer<AppsPickerState
         is AppsPickerCommand.AppsLoaded -> {
             state.copy(
                 apps = command.apps,
-                searchedApps = command.apps,
                 isLoading = false,
-            ).noSideEffects()
+            ).withSideEffects(
+                AppsPickerSideEffect.FilterApps(
+                    query = state.query,
+                    apps = command.apps,
+                    category = state.selectedCategory,
+                ),
+            )
         }
 
         is AppsPickerCommand.SearchedAppsUpdated -> {
@@ -48,6 +65,24 @@ internal class AppsPickerReducer @Inject constructor() : Reducer<AppsPickerState
 
         is AppsPickerCommand.AppClicked -> {
             state.withSideEffects(AppsPickerSideEffect.HandleAppSelection(command.app))
+        }
+
+        is AppsPickerCommand.SelectAllInCurrentView -> {
+            state.withSideEffects(
+                AppsPickerSideEffect.HandleAppsChecked(
+                    apps = command.apps,
+                    checked = true,
+                ),
+            )
+        }
+
+        is AppsPickerCommand.ClearAllInCurrentView -> {
+            state.withSideEffects(
+                AppsPickerSideEffect.HandleAppsChecked(
+                    apps = command.apps,
+                    checked = false,
+                ),
+            )
         }
     }
 }

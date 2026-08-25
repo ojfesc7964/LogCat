@@ -12,6 +12,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.f0x1d.logfox.core.context.isHorizontalOrientation
+import com.f0x1d.logfox.core.context.shareFileIntent
 import com.f0x1d.logfox.core.copy.copyText
 import com.f0x1d.logfox.core.tea.BaseStoreFragment
 import com.f0x1d.logfox.core.ui.icons.Icons
@@ -125,8 +126,14 @@ internal class LogsFragment :
             setClickListenerOn(R.id.export_selected_item) {
                 send(LogsCommand.ExportSelectedClicked)
             }
+            setClickListenerOn(R.id.quick_export_selected_item) {
+                send(LogsCommand.QuickExportSelectedClicked)
+            }
             setClickListenerOn(R.id.save_current_log_item) {
                 send(LogsCommand.SaveCurrentLogsClicked)
+            }
+            setClickListenerOn(R.id.quick_export_current_log_item) {
+                send(LogsCommand.QuickExportCurrentLogsClicked)
             }
             setClickListenerOn(R.id.clear_item) {
                 send(LogsCommand.ClearLogs)
@@ -246,6 +253,10 @@ internal class LogsFragment :
                 saveCurrentLogsLauncher.launch(sideEffect.filename)
             }
 
+            is LogsSideEffect.ShareFile -> {
+                requireContext().shareFileIntent(sideEffect.file)
+            }
+
             else -> Unit
         }
     }
@@ -325,6 +336,7 @@ internal class LogsFragment :
         invisibleDuringSelection(R.id.filters_item)
         visibleDuringSelection(R.id.selected_item)
         visibleOnlyInDefault(R.id.save_current_log_item)
+        visibleOnlyInDefault(R.id.quick_export_current_log_item)
         visibleOnlyInDefault(R.id.clear_item)
         visibleOnlyInDefault(R.id.restart_logging_item)
         visibleOnlyInDefault(R.id.exit_item)

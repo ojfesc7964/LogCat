@@ -1,6 +1,7 @@
 package com.f0x1d.logfox.feature.filters.presentation.list
 
 import android.net.Uri
+import com.f0x1d.logfox.feature.apps.picker.api.InstalledApp
 import com.f0x1d.logfox.feature.filters.api.model.UserFilter
 
 internal sealed interface FiltersCommand {
@@ -13,4 +14,7 @@ internal sealed interface FiltersCommand {
     data object ClearAll : FiltersCommand
     data class OpenFilter(val filterId: Long) : FiltersCommand
     data object CreateNewFilter : FiltersCommand
+    data object OpenAppsFilter : FiltersCommand
+    data class ToggleAppFilter(val title: String, val packageName: String, val checked: Boolean) : FiltersCommand
+    data class ToggleMultipleAppsFilter(val apps: List<InstalledApp>, val checked: Boolean) : FiltersCommand
 }

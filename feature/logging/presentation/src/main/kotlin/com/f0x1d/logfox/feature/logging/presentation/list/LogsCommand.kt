@@ -42,6 +42,12 @@ internal sealed interface LogsCommand {
 
     data class SaveCurrentLogsTo(val uri: Uri) : LogsCommand
 
+    data object QuickExportSelectedClicked : LogsCommand
+
+    data object QuickExportCurrentLogsClicked : LogsCommand
+
+    data class ShareFileReady(val file: java.io.File) : LogsCommand
+
     data object SwitchState : LogsCommand
 
     data object Pause : LogsCommand

@@ -169,6 +169,7 @@ private fun RecordingsItems(
                 modifier = Modifier.animateItem(),
                 item = item,
                 onRecordingClick = listener.onRecordingClick,
+                onRecordingShareClick = listener.onRecordingShareClick,
                 onRecordingDeleteClick = listener.onRecordingDeleteClick,
             )
 
@@ -189,6 +190,7 @@ private fun RecordingItem(
     item: LogRecordingItem,
     modifier: Modifier = Modifier,
     onRecordingClick: (LogRecordingItem) -> Unit = { },
+    onRecordingShareClick: (LogRecordingItem) -> Unit = { },
     onRecordingDeleteClick: (LogRecordingItem) -> Unit = { },
 ) {
     Row(
@@ -230,6 +232,16 @@ private fun RecordingItem(
                 text = item.formattedDate,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        IconButton(
+            onClick = { onRecordingShareClick(item) },
+        ) {
+            Icon(
+                painter = painterResource(Icons.ic_share),
+                tint = MaterialTheme.colorScheme.primary,
+                contentDescription = null,
             )
         }
 

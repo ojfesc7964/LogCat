@@ -12,4 +12,5 @@ internal sealed interface RecordingsSideEffect {
     // UI (handled by Fragment)
     data class ShowSnackbar(val text: String) : RecordingsSideEffect
     data class OpenRecording(val recordingId: Long) : RecordingsSideEffect
+    data class ShareRecordingFile(val file: java.io.File) : RecordingsSideEffect
 }

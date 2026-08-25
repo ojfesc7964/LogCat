@@ -7,6 +7,7 @@ import com.f0x1d.logfox.feature.recordings.presentation.model.LogRecordingItem
 internal data class RecordingsScreenListener(
     val onRecordingClick: (LogRecordingItem) -> Unit,
     val onRecordingDeleteClick: (LogRecordingItem) -> Unit,
+    val onRecordingShareClick: (LogRecordingItem) -> Unit,
     val onStartStopClick: () -> Unit,
     val onPauseResumeClick: () -> Unit,
     val onClearClick: () -> Unit,
@@ -16,6 +17,7 @@ internal data class RecordingsScreenListener(
 internal val MockRecordingsScreenListener = RecordingsScreenListener(
     onRecordingClick = { },
     onRecordingDeleteClick = { },
+    onRecordingShareClick = { },
     onStartStopClick = { },
     onPauseResumeClick = { },
     onClearClick = { },

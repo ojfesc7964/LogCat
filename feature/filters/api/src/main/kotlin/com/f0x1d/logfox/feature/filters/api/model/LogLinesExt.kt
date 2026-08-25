@@ -53,9 +53,18 @@ private fun UserFilter.lineSuits(logLine: LogLine) =
     uid.equalsOrTrueIfNull(logLine.uid) &&
     pid.equalsOrTrueIfNull(logLine.pid) &&
     tid.equalsOrTrueIfNull(logLine.tid) &&
-    packageName.equalsOrTrueIfNull(logLine.packageName ?: "") &&
+    packageName.matchesPackageNameOrTrueIfNull(logLine.packageName ?: "") &&
     tag.equalsOrTrueIfNull(logLine.tag) &&
     content.containsOrTrueIfNull(logLine.content)
+
+private fun String?.matchesPackageNameOrTrueIfNull(other: String) =
+    if (this == null) {
+        true
+    } else if (this.contains(",")) {
+        this.split(",").map { it.trim() }.contains(other)
+    } else {
+        other == this
+    }
 
 private fun String?.equalsOrTrueIfNull(other: String) = if (this == null) true else other == this
 private fun String?.containsOrTrueIfNull(other: String) = if (this ==

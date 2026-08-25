@@ -10,6 +10,7 @@ internal class AppsPickerViewStateMapper @Inject constructor() : ViewStateMapper
         checkedAppPackageNames = state.checkedAppPackageNames,
         searchedApps = state.searchedApps,
         multiplySelectionEnabled = state.multiplySelectionEnabled,
+        selectedCategory = state.selectedCategory,
         isLoading = state.isLoading,
         searchActive = state.searchActive,
         query = state.query,

@@ -1,5 +1,6 @@
 package com.f0x1d.logfox.feature.apps.picker.impl.domain
 
+import com.f0x1d.logfox.feature.apps.picker.api.AppFilterCategory
 import com.f0x1d.logfox.feature.apps.picker.api.InstalledApp
 import com.f0x1d.logfox.feature.apps.picker.api.domain.FilterAppsUseCase
 import javax.inject.Inject
@@ -9,8 +10,17 @@ internal class FilterAppsUseCaseImpl @Inject constructor() : FilterAppsUseCase {
     override fun invoke(
         query: String,
         apps: List<InstalledApp>,
+        category: AppFilterCategory,
     ): List<InstalledApp> = apps.filter { app ->
-        app.title.contains(query, ignoreCase = true) ||
+        val matchesCategory = when (category) {
+            AppFilterCategory.ALL -> true
+            AppFilterCategory.USER -> !app.isSystemApp
+            AppFilterCategory.SYSTEM -> app.isSystemApp
+        }
+        val matchesQuery = query.isEmpty() ||
+            app.title.contains(query, ignoreCase = true) ||
             app.packageName.contains(query, ignoreCase = true)
+
+        matchesCategory && matchesQuery
     }
 }

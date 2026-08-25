@@ -24,7 +24,11 @@ internal sealed interface LogsSideEffect {
 
     data object PrepareSaveCurrentLogs : LogsSideEffect
 
+    data class PrepareQuickShareLogs(val lines: List<LogLine>) : LogsSideEffect
+
     // UI side effects - handled by Fragment
+    data class ShareFile(val file: java.io.File) : LogsSideEffect
+
     data object NavigateToRecordings : LogsSideEffect
 
     data object OpenFilters : LogsSideEffect

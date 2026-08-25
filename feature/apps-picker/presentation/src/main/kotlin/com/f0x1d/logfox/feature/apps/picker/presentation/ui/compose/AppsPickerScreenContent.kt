@@ -21,10 +21,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -40,6 +42,7 @@ import com.f0x1d.logfox.compose.base.preview.DayNightPreview
 import com.f0x1d.logfox.compose.designsystem.component.button.NavigationBackButton
 import com.f0x1d.logfox.compose.designsystem.component.search.TopSearchBar
 import com.f0x1d.logfox.compose.designsystem.theme.LogFoxTheme
+import com.f0x1d.logfox.feature.apps.picker.api.AppFilterCategory
 import com.f0x1d.logfox.feature.apps.picker.api.InstalledApp
 import com.f0x1d.logfox.feature.apps.picker.presentation.AppsPickerViewState
 import com.f0x1d.logfox.feature.apps.picker.presentation.ui.AppsPickerScreenListener
@@ -65,12 +68,23 @@ internal fun AppsPickerScreenContent(
             if (state.isLoading) {
                 LoadingContent(modifier = Modifier.padding(paddingValues))
             } else {
-                AppsContent(
-                    items = state.apps,
-                    checkedItems = state.checkedAppPackageNames,
-                    listener = listener,
-                    contentPadding = paddingValues,
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                ) {
+                    CategoryAndBatchActionsBar(
+                        state = state,
+                        listener = listener,
+                    )
+
+                    AppsContent(
+                        items = state.searchedApps,
+                        checkedItems = state.checkedAppPackageNames,
+                        listener = listener,
+                        contentPadding = PaddingValues(0.dp),
+                    )
+                }
             }
         }
 
@@ -78,6 +92,61 @@ internal fun AppsPickerScreenContent(
             enabled = state.searchActive,
             onBack = listener.onBackClicked,
         )
+    }
+}
+
+@Composable
+private fun CategoryAndBatchActionsBar(
+    state: AppsPickerViewState,
+    listener: AppsPickerScreenListener,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FilterChip(
+                selected = state.selectedCategory == AppFilterCategory.ALL,
+                onClick = { listener.onCategoryChanged(AppFilterCategory.ALL) },
+                label = { Text(text = stringResource(id = Strings.all_apps)) },
+            )
+            FilterChip(
+                selected = state.selectedCategory == AppFilterCategory.USER,
+                onClick = { listener.onCategoryChanged(AppFilterCategory.USER) },
+                label = { Text(text = stringResource(id = Strings.user_apps)) },
+            )
+            FilterChip(
+                selected = state.selectedCategory == AppFilterCategory.SYSTEM,
+                onClick = { listener.onCategoryChanged(AppFilterCategory.SYSTEM) },
+                label = { Text(text = stringResource(id = Strings.system_apps)) },
+            )
+        }
+
+        if (state.multiplySelectionEnabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    onClick = { listener.onSelectAllClicked(state.searchedApps) },
+                ) {
+                    Text(text = stringResource(id = Strings.select_all))
+                }
+
+                TextButton(
+                    onClick = { listener.onClearAllClicked(state.searchedApps) },
+                ) {
+                    Text(text = stringResource(id = Strings.clear_all))
+                }
+            }
+        }
     }
 }
 
@@ -229,6 +298,7 @@ internal val MockAppsPickerState = AppsPickerViewState(
     checkedAppPackageNames = setOf(MockApps.first().packageName),
     searchedApps = MockApps,
     multiplySelectionEnabled = true,
+    selectedCategory = AppFilterCategory.ALL,
     isLoading = false,
     searchActive = false,
     query = "",

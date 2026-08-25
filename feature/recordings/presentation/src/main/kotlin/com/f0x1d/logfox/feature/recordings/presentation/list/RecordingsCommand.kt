@@ -14,6 +14,7 @@ internal sealed interface RecordingsCommand {
     data object ClearRecordings : RecordingsCommand
     data object SaveAll : RecordingsCommand
     data class Delete(val recordingId: Long) : RecordingsCommand
+    data class ShareRecording(val recordingId: Long) : RecordingsCommand
 
     // Result commands from effect handler
     data class RecordingEnded(val recording: LogRecording?) : RecordingsCommand

@@ -165,4 +165,11 @@
     <string name="remove_from_blacklist">从黑名单中移除</string>
     <string name="warning_blacklist">您确定要将此应用添加到黑名单吗？LogFox 将不会监听列入黑名单应用的崩溃</string>
     <string name="share_logs">分享日志</string>
+    <string name="all_apps">全部</string>
+    <string name="user_apps">用户应用</string>
+    <string name="system_apps">系统应用</string>
+    <string name="clear_all">清空选择</string>
+    <string name="quick_export">一键导出 / 分享</string>
+    <string name="filter_by_apps">按应用筛选</string>
+    <string name="share_recording">分享录制文件</string>
 </resources>

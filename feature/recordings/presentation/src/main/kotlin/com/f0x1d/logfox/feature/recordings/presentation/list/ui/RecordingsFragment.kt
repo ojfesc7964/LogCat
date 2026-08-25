@@ -10,6 +10,7 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
+import com.f0x1d.logfox.core.context.shareFileIntent
 import com.f0x1d.logfox.core.ui.compose.BaseComposeFragment
 import com.f0x1d.logfox.core.ui.dialog.showAreYouSureClearDialog
 import com.f0x1d.logfox.core.ui.dialog.showAreYouSureDeleteDialog
@@ -41,6 +42,10 @@ internal class RecordingsFragment : BaseComposeFragment() {
 
                     is RecordingsSideEffect.OpenRecording -> openDetails(sideEffect.recordingId)
 
+                    is RecordingsSideEffect.ShareRecordingFile -> {
+                        requireContext().shareFileIntent(sideEffect.file)
+                    }
+
                     // Business logic side effects - handled by EffectHandler, ignored here
                     else -> Unit
                 }
@@ -55,6 +60,7 @@ internal class RecordingsFragment : BaseComposeFragment() {
                         viewModel.send(RecordingsCommand.Delete(it.recordingId))
                     }
                 },
+                onRecordingShareClick = { viewModel.send(RecordingsCommand.ShareRecording(it.recordingId)) },
                 onStartStopClick = { viewModel.send(RecordingsCommand.ToggleStartStop) },
                 onPauseResumeClick = { viewModel.send(RecordingsCommand.TogglePauseResume) },
                 onClearClick = {

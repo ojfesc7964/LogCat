@@ -13,6 +13,10 @@ interface AppsPickerResultHandler {
 
     fun onAppChecked(app: InstalledApp, checked: Boolean) = Unit
 
+    fun onAppsChecked(apps: List<InstalledApp>, checked: Boolean) {
+        apps.forEach { onAppChecked(it, checked) }
+    }
+
     // pass true to close fragment
     fun onAppSelected(app: InstalledApp): Boolean = false
 }

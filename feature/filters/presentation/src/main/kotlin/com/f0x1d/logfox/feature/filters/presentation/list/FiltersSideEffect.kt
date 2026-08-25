@@ -1,6 +1,7 @@
 package com.f0x1d.logfox.feature.filters.presentation.list
 
 import android.net.Uri
+import com.f0x1d.logfox.feature.apps.picker.api.InstalledApp
 import com.f0x1d.logfox.feature.filters.api.model.UserFilter
 
 internal sealed interface FiltersSideEffect {
@@ -11,8 +12,11 @@ internal sealed interface FiltersSideEffect {
     data class SwitchFilter(val filter: UserFilter, val checked: Boolean) : FiltersSideEffect
     data class DeleteFilter(val filter: UserFilter) : FiltersSideEffect
     data object ClearAllFilters : FiltersSideEffect
+    data class ToggleAppFilter(val title: String, val packageName: String, val checked: Boolean) : FiltersSideEffect
+    data class ToggleMultipleAppsFilter(val apps: List<InstalledApp>, val checked: Boolean) : FiltersSideEffect
 
     // UI side effects - handled by Fragment
     data class NavigateToEditFilter(val filterId: Long) : FiltersSideEffect
     data object NavigateToCreateFilter : FiltersSideEffect
+    data object NavigateToAppsPicker : FiltersSideEffect
 }

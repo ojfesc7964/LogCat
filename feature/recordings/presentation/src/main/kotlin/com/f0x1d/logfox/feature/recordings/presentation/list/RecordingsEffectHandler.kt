@@ -85,8 +85,8 @@ internal class RecordingsEffectHandler @Inject constructor(
 
             // UI side effects - handled by Fragment, ignored here
             is RecordingsSideEffect.ShowSnackbar -> Unit
-
             is RecordingsSideEffect.OpenRecording -> Unit
+            is RecordingsSideEffect.ShareRecordingFile -> Unit
         }
     }
 }
