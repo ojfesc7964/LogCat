@@ -14,7 +14,8 @@ on:
 
 env:
   KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-  ALIAS: ${{ secrets.ALIAS }}
+  # 源码中的 Gradle 脚本读取的是 ALIAS 环境变量，此处将 Secret 中的 KEY_ALIAS 映射过去
+  ALIAS: ${{ secrets.KEY_ALIAS }}
   KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
   VERSION_NAME: ${{ inputs.version_name }}
   VERSION_CODE: ${{ inputs.version_code }}
