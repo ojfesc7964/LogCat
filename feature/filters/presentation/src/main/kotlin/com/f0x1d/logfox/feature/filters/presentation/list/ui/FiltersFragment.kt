@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
-import androidx.fragment.app.viewModels
+import androidx.hilt.navigation.fragment.hiltNavGraphViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.f0x1d.logfox.core.tea.BaseStoreFragment
@@ -38,7 +38,7 @@ internal class FiltersFragment :
         FiltersViewModel,
         >() {
 
-    override val viewModel by viewModels<FiltersViewModel>()
+    override val viewModel by hiltNavGraphViewModels<FiltersViewModel>(Directions.filtersFragment)
 
     private val adapter = FiltersAdapter(
         click = {
