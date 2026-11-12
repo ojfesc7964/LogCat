@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -47,6 +48,10 @@ class LoggingService : LifecycleService() {
 
     // 独立于 Service 生命周期的 scope，保证 onDestroy 阶段仍能执行终端释放。
     private val releaseScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    // onTaskRemoved 与 onDestroy 都会触发终端释放，用标志位保证只真正释放一次，
+    // 避免对同一个 Shizuku 特权进程重复解绑造成 Shizuku 内部状态异常。
+    private val isTerminalReleased = AtomicBoolean(false)
 
     private lateinit var store: Store<LoggingServiceState, LoggingServiceCommand, LoggingServiceSideEffect>
 
@@ -130,11 +135,14 @@ class LoggingService : LifecycleService() {
         stopSelf()
     }
 
-    // 显式释放当前终端持有的特权资源。
-    // ShizukuTerminal.exit() 内部是同步 AIDL 调用，没有真正的挂起点，
-    // 因此这里的 launch 会在当前线程同步执行完再返回，不阻塞也不依赖 runBlocking。
+    // 显式释放当前终端持有的特权资源。使用 AtomicBoolean 保证只执行一次，
+    // 避免 onTaskRemoved 与 onDestroy 重复对同一个 Shizuku 特权进程发起 unbind。
     // 使用独立 scope 而不是 lifecycleScope，保证 onDestroy 阶段也能执行。
     private fun releaseTerminal() {
+        if (!isTerminalReleased.compareAndSet(false, true)) {
+            return
+        }
+
         val terminal = runCatching { store.state.value.currentTerminal }.getOrNull() ?: return
 
         releaseScope.launch {
