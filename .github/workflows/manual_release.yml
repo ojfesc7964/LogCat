@@ -13,11 +13,10 @@ on:
         type: string
 
 env:
+  # 此处引用的名称必须与 GitHub Repository Secrets 中创建的完全一致
   KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-  # 源码中的 Gradle 脚本读取的是 ALIAS 环境变量，此处将 Secret 中的 KEY_ALIAS 映射过去
   ALIAS: ${{ secrets.KEY_ALIAS }}
-  # 对齐 GitHub Secrets 中的实际名称（注意末尾是数字 0 而非字母 O）
-  KEY_PASSWORD: ${{ secrets.KEY_PASSW0RD }}
+  KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
   VERSION_NAME: ${{ inputs.version_name }}
   VERSION_CODE: ${{ inputs.version_code }}
 
@@ -45,6 +44,7 @@ jobs:
 
       - name: Detect Keystore Type
         run: |
+          # 读取 Keystore 文件头部的魔数，避免 Java 21 默认使用 PKCS12 解析 JKS 导致报错
           MAGIC=$(od -An -tx1 -N4 app/keystore/main.jks | tr -d ' \n')
           if [ "$MAGIC" = "feedfeed" ]; then
             echo "KEY_STORE_TYPE=JKS" >> "$GITHUB_ENV"
