@@ -89,9 +89,25 @@ internal class ShizukuTerminal @Inject constructor(
     }
 
     private fun Continuation<Boolean>.resumeWithServiceBinding() {
-        if (userService != null) {
-            resume(true)
-            return
+        // 复用仍然存活的特权进程，避免每次重新绑定时都创建新的 UserService。
+        val existingService = userService
+        if (existingService != null) {
+            if (existingService.asBinder().pingBinder()) {
+                resume(true)
+                return
+            }
+            // binder 已失效（特权进程被系统回收），清空本地引用以便重新绑定。
+            userService = null
+        }
+
+        // 清理残留的旧连接，避免 Shizuku 内部继续保留一条无效的绑定记录，
+        // 导致重新绑定时叠加出多个特权进程。
+        val oldConnection = serviceConnection
+        if (oldConnection != null) {
+            serviceConnection = null
+            runCatching {
+                Shizuku.unbindUserService(userServiceArgs, oldConnection, true)
+            }.onFailure { Timber.w(it, "Failed to unbind stale Shizuku user service") }
         }
 
         var resumed = false
@@ -123,10 +139,21 @@ internal class ShizukuTerminal @Inject constructor(
     }
 
     override suspend fun executeNow(vararg command: String) = withContext(ioDispatcher) {
-        userService?.executeNow(command.joinToString(" ")) ?: TerminalResult(3)
+        val service = userService
+        // binder 已死或尚未建立时直接返回失败结果，避免向失效服务发起调用。
+        if (service == null || !service.asBinder().pingBinder()) {
+            return@withContext TerminalResult(3)
+        }
+        service.executeNow(command.joinToString(" "))
     }
 
     override fun execute(vararg command: String) = userService?.run {
+        // binder 已死时清空本地引用，避免后续调用继续命中失效服务。
+        if (!asBinder().pingBinder()) {
+            userService = null
+            return@run null
+        }
+
         val processId = execute(command.joinToString(" "))
 
         TerminalProcess(
@@ -139,7 +166,7 @@ internal class ShizukuTerminal @Inject constructor(
     }
 
     override suspend fun exit() {
-        // 按 MaterialFiles 的方式解绑：传真实的 ServiceConnection 与 remove=true。
+        // 按 MaterialFiles 的方式解绑：传真实的 ServiceConnection 与 remove = true。
         // Shizuku 收到后会对 UserService 调用 destroy()（UserService 内部 exitProcess(0) 退出），
         // 并从内部缓存移除该 UserServiceArgs 记录。第三个参数为 true 是销毁特权进程的关键，
         // 传 null connection 或不传 true 都只解除绑定而不会让特权进程结束。
