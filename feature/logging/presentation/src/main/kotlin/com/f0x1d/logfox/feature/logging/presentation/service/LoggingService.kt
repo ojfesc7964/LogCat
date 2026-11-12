@@ -1,5 +1,7 @@
 package com.f0x1d.logfox.feature.logging.presentation.service
 
+import android.app.ActivityManager
+import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
@@ -49,8 +51,8 @@ class LoggingService : LifecycleService() {
     // 独立于 Service 生命周期的 scope，保证 onDestroy 阶段仍能执行终端释放。
     private val releaseScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    // onTaskRemoved 与 onDestroy 都会触发终端释放，用标志位保证只真正释放一次，
-    // 避免对同一个 Shizuku 特权进程重复解绑造成 Shizuku 内部状态异常。
+    // onTaskRemoved、onDestroy、以及外部强制清理都可能触发终端释放，
+    // 用标志位保证只真正释放一次，避免重复 unbind。
     private val isTerminalReleased = AtomicBoolean(false)
 
     private lateinit var store: Store<LoggingServiceState, LoggingServiceCommand, LoggingServiceSideEffect>
@@ -71,6 +73,11 @@ class LoggingService : LifecycleService() {
 
         // Start logging
         store.send(LoggingServiceCommand.StartLogging)
+
+        // onTaskRemoved 在 Android 8.0+ 及许多 OEM ROM 上可能不被调用，
+        // 导致从最近任务划掉后 UserService 仍然存活。
+        // 在 onDestroy 之外，额外监听进程的 “仅保留缓存” 状态作为兜底触发点。
+        registerTrimMemoryCleanup()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -119,8 +126,7 @@ class LoggingService : LifecycleService() {
         )
         .build()
 
-    // 通知栏"退出"按钮路径：释放特权进程、清理最近任务列表并停止日志服务。
-    // 不硬退应用进程，特权进程由 ShizukuTerminal.exit() 显式销毁，应用进程交给系统回收。
+    // 通知栏“退出”按钮路径：释放特权进程、清理最近任务列表并停止日志服务。
     private fun killApp() {
         Timber.d("killing app")
 
@@ -135,9 +141,8 @@ class LoggingService : LifecycleService() {
         stopSelf()
     }
 
-    // 显式释放当前终端持有的特权资源。使用 AtomicBoolean 保证只执行一次，
-    // 避免 onTaskRemoved 与 onDestroy 重复对同一个 Shizuku 特权进程发起 unbind。
-    // 使用独立 scope 而不是 lifecycleScope，保证 onDestroy 阶段也能执行。
+    // 在应用任务被移除、Service 销毁、或进程即将变为缓存态时释放 Shizuku 特权进程。
+    // 使用 AtomicBoolean 保证只执行一次。
     private fun releaseTerminal() {
         if (!isTerminalReleased.compareAndSet(false, true)) {
             return
@@ -151,12 +156,23 @@ class LoggingService : LifecycleService() {
         }
     }
 
+    // 注册 ActivityManager.OnTrimMemoryListener，当进程进入 TRIM_MEMORY_UI_HIDDEN
+    // （所有 UI 已不可见，即用户离开了应用）时执行清理。
+    // 这一信号在用户按 Home 键或从最近任务划掉后通常都会触发，比 onTaskRemoved 更可靠。
+    @Suppress("DEPRECATION")
+    private fun registerTrimMemoryCleanup() {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        activityManager.addOnTrimMemoryListener { level ->
+            if (level == ActivityManager.TRIM_MEMORY_UI_HIDDEN) {
+                Timber.d("trim memory UI hidden, releasing terminal")
+                releaseTerminal()
+            }
+        }
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
 
-        // 用户从最近任务划掉应用：显式释放 Shizuku 特权进程并停止日志服务。
-        // 不硬退进程，应用进程交给系统按常规策略回收；下次打开应用时
-        // MainViewModel 的 StartLoggingServiceIfNeeded 会重新启动 Service。
         Timber.d("task removed, releasing terminal")
         releaseTerminal()
         store.cancel()
@@ -167,8 +183,7 @@ class LoggingService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
 
-        // 兜底：部分定制系统划掉后台时可能不回调 onTaskRemoved，直接杀进程或走 onDestroy。
-        // 此时同样显式释放特权进程，避免 UserService 残留在 Shizuku/Sui 中。
+        Timber.d("service destroyed, releasing terminal")
         releaseTerminal()
         store.cancel()
     }
