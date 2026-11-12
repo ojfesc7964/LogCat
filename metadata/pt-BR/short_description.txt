@@ -1,1 +1,0 @@
-Leitores de LogCat podem ser bonitos e úteis também!
