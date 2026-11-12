@@ -105,14 +105,25 @@ class LoggingService : LifecycleService() {
         )
         .build()
 
+    // 通知栏"退出"按钮路径：先清理最近任务列表，再走统一的硬退出。
+    // finishAndRemoveTask 会回调 onTaskRemoved，后者直接调用 forceExit，
+    // 不会回到这里，因此不存在递归。
     private fun killApp() {
         Timber.d("killing app")
-
-        store.cancel()
 
         activityManager.appTasks.forEach {
             it.finishAndRemoveTask()
         }
+
+        forceExit()
+    }
+
+    // 硬退出收尾：取消 store、停止前台服务、终止进程。
+    // store.cancel 幂等，stopSelf 触发的 onDestroy 再次 cancel 也不会有副作用。
+    // exitProcess 确保宿主进程立即死亡，Shizuku/Sui 通过 binder death 回收
+    // 以 daemon(false) 绑定的 UserService，避免特权进程残留。
+    private fun forceExit() {
+        store.cancel()
 
         ServiceCompat.stopForeground(this@LoggingService, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -123,6 +134,16 @@ class LoggingService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         store.cancel()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+
+        // 用户从最近任务划掉应用时彻底退出进程，确保 Shizuku 托管的特权进程
+        // （UserService）随宿主进程死亡被回收，不残留。此时 task 已被系统移除，
+        // 无需再 finishAndRemoveTask，直接 forceExit 即可。
+        Timber.d("task removed, force exiting")
+        forceExit()
     }
 
     override fun onBind(intent: Intent): IBinder {
