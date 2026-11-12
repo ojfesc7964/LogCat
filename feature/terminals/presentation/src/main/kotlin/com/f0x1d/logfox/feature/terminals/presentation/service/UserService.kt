@@ -11,7 +11,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -34,9 +33,10 @@ class UserService() : IUserService.Stub() {
     constructor(context: Context) : this()
 
     override fun destroy() {
-        serviceScope.cancel()
-        runBlocking { serviceScopeJob.join() }
-
+        // 直接结束进程。Shizuku 在 unbindUserService(remove = true) 时同步调用本方法，
+        // 若在此阻塞（例如等待阻塞于 pipe 写操作的协程），unbind 无法返回，
+        // Shizuku 内部的绑定记录不会被移除，重新绑定时会再创建新进程，
+        // 造成特权进程残留与累积。协程会随 exitProcess 一并终止，无需等待。
         currentProcesses.values.forEach { process ->
             process.tryDestroy()
         }
