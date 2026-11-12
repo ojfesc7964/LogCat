@@ -41,6 +41,10 @@ internal class ShizukuTerminal @Inject constructor(
 
     private var userService: IUserService? = null
 
+    // 保存绑定时的 ServiceConnection，unbindUserService 需要它来精确匹配并移除
+    // Shizuku 内部的 connection 记录；只传 null 无法匹配到已绑定的连接。
+    private var serviceConnection: ServiceConnection? = null
+
     private val userServiceArgs by lazy {
         Shizuku.UserServiceArgs(ComponentName(context, UserService::class.java))
             .daemon(false)
@@ -91,7 +95,7 @@ internal class ShizukuTerminal @Inject constructor(
         }
 
         var resumed = false
-        object : ServiceConnection {
+        val connection = object : ServiceConnection {
             override fun onServiceConnected(componentName: ComponentName?, binder: IBinder?) {
                 if (binder == null || !binder.pingBinder()) {
                     if (resumed.not()) {
@@ -112,9 +116,10 @@ internal class ShizukuTerminal @Inject constructor(
             override fun onServiceDisconnected(componentName: ComponentName?) {
                 userService = null
             }
-        }.also {
-            Shizuku.bindUserService(userServiceArgs, it)
         }
+
+        serviceConnection = connection
+        Shizuku.bindUserService(userServiceArgs, connection)
     }
 
     override suspend fun executeNow(vararg command: String) = withContext(ioDispatcher) {
@@ -134,20 +139,16 @@ internal class ShizukuTerminal @Inject constructor(
     }
 
     override suspend fun exit() {
-        // 显式命令 Shizuku 特权进程退出，再解绑并移除 UserServiceArgs 缓存。
-        // 仅解绑不会让特权进程结束：daemon=false 时只有宿主进程死亡才会跟着退出，
-        // 宿主进程仍在时特权进程会残留。因此必须调用 UserService.exit()，
-        // 让特权进程自己 exitProcess(0)，与 MaterialFiles 的显式销毁思路一致。
-        runCatching {
-            userService?.exit()
-        }.onFailure { Timber.w(it, "Failed to exit Shizuku user service") }
-
+        // 按 MaterialFiles 的方式解绑：传真实的 ServiceConnection 与 remove=true。
+        // Shizuku 收到后会对 UserService 调用 destroy()（UserService 内部 exitProcess(0) 退出），
+        // 并从内部缓存移除该 UserServiceArgs 记录。第三个参数为 true 是销毁特权进程的关键，
+        // 传 null connection 或不传 true 都只解除绑定而不会让特权进程结束。
+        val connection = serviceConnection
+        serviceConnection = null
         userService = null
 
-        // 第三个参数传 true：解除绑定并移除 UserServiceArgs 缓存，
-        // 避免后续重新绑定复用已退出的特权进程。
         runCatching {
-            Shizuku.unbindUserService(userServiceArgs, null, true)
+            Shizuku.unbindUserService(userServiceArgs, connection, true)
         }.onFailure { Timber.w(it, "Failed to unbind Shizuku user service") }
     }
 }
