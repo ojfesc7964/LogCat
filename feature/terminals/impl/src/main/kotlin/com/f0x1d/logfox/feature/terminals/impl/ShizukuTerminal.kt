@@ -19,6 +19,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.Continuation
@@ -133,13 +134,20 @@ internal class ShizukuTerminal @Inject constructor(
     }
 
     override suspend fun exit() {
-        // Catching as binder might not even was received
+        // 显式命令 Shizuku 特权进程退出，再解绑并移除 UserServiceArgs 缓存。
+        // 仅解绑不会让特权进程结束：daemon=false 时只有宿主进程死亡才会跟着退出，
+        // 宿主进程仍在时特权进程会残留。因此必须调用 UserService.exit()，
+        // 让特权进程自己 exitProcess(0)，与 MaterialFiles 的显式销毁思路一致。
         runCatching {
-            // With true flag it does not remove connection from cache
-            Shizuku.unbindUserService(userServiceArgs, null, false)
-            Shizuku.unbindUserService(userServiceArgs, null, true)
+            userService?.exit()
+        }.onFailure { Timber.w(it, "Failed to exit Shizuku user service") }
 
-            userService = null
-        }
+        userService = null
+
+        // 第三个参数传 true：解除绑定并移除 UserServiceArgs 缓存，
+        // 避免后续重新绑定复用已退出的特权进程。
+        runCatching {
+            Shizuku.unbindUserService(userServiceArgs, null, true)
+        }.onFailure { Timber.w(it, "Failed to unbind Shizuku user service") }
     }
 }
