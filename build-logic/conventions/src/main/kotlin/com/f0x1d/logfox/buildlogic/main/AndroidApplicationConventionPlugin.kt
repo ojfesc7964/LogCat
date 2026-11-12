@@ -30,6 +30,10 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                             storePassword = System.getenv("KEY_STORE_PASSWORD")
                             keyAlias = System.getenv("ALIAS")
                             keyPassword = System.getenv("KEY_PASSWORD")
+                            // Selects the keystore reader matching the on-disk format so AGP
+                            // does not fall back to the JDK default (PKCS12), which fails on
+                            // JKS files with "Tag number over 30 is not supported".
+                            storeType = System.getenv("KEY_STORE_TYPE") ?: "JKS"
                         }
                     }
                 }
