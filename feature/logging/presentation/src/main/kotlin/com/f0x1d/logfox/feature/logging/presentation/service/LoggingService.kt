@@ -18,11 +18,12 @@ import com.f0x1d.logfox.feature.notifications.api.LOGGING_STATUS_CHANNEL_ID
 import com.f0x1d.logfox.feature.strings.Strings
 import com.f0x1d.logfox.feature.terminals.api.domain.ExitTerminalUseCase
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import javax.inject.Inject
-import kotlin.system.exitProcess
 
 @AndroidEntryPoint
 class LoggingService : LifecycleService() {
@@ -43,6 +44,9 @@ class LoggingService : LifecycleService() {
 
     @Inject
     lateinit var exitTerminalUseCase: ExitTerminalUseCase
+
+    // 独立于 Service 生命周期的 scope，保证 onDestroy 阶段仍能执行终端释放。
+    private val releaseScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private lateinit var store: Store<LoggingServiceState, LoggingServiceCommand, LoggingServiceSideEffect>
 
@@ -110,11 +114,12 @@ class LoggingService : LifecycleService() {
         )
         .build()
 
-    // 通知栏"退出"按钮路径：显式释放特权进程、清理最近任务列表并硬退出进程。
+    // 通知栏"退出"按钮路径：释放特权进程、清理最近任务列表并停止日志服务。
+    // 不硬退应用进程，特权进程由 ShizukuTerminal.exit() 显式销毁，应用进程交给系统回收。
     private fun killApp() {
         Timber.d("killing app")
 
-        releaseTerminalBlocking()
+        releaseTerminal()
         store.cancel()
 
         activityManager.appTasks.forEach {
@@ -123,30 +128,29 @@ class LoggingService : LifecycleService() {
 
         ServiceCompat.stopForeground(this@LoggingService, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
-
-        exitProcess(0)
     }
 
     // 显式释放当前终端持有的特权资源。
-    // Shizuku 后端下会走 Shizuku.unbindUserService，触发 daemon(false) 的 UserService 被 Shizuku 回收，
-    // 不依赖宿主进程死亡带来的 binder death，符合 MaterialFiles 的显式解绑思路。
-    // 使用 runBlocking 保证在 Service 销毁前完成解绑（unbind 本身是同步调用，不会长时间阻塞）。
-    private fun releaseTerminalBlocking() {
+    // ShizukuTerminal.exit() 内部是同步 AIDL 调用，没有真正的挂起点，
+    // 因此这里的 launch 会在当前线程同步执行完再返回，不阻塞也不依赖 runBlocking。
+    // 使用独立 scope 而不是 lifecycleScope，保证 onDestroy 阶段也能执行。
+    private fun releaseTerminal() {
         val terminal = runCatching { store.state.value.currentTerminal }.getOrNull() ?: return
 
-        runCatching {
-            runBlocking { exitTerminalUseCase(terminal) }
-        }.onFailure { Timber.w(it, "Failed to release terminal") }
+        releaseScope.launch {
+            runCatching { exitTerminalUseCase(terminal) }
+                .onFailure { Timber.w(it, "Failed to release terminal") }
+        }
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
 
-        // 用户从最近任务划掉应用：显式解绑 Shizuku 特权进程并停止日志服务。
+        // 用户从最近任务划掉应用：显式释放 Shizuku 特权进程并停止日志服务。
         // 不硬退进程，应用进程交给系统按常规策略回收；下次打开应用时
         // MainViewModel 的 StartLoggingServiceIfNeeded 会重新启动 Service。
         Timber.d("task removed, releasing terminal")
-        releaseTerminalBlocking()
+        releaseTerminal()
         store.cancel()
         ServiceCompat.stopForeground(this@LoggingService, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -157,7 +161,7 @@ class LoggingService : LifecycleService() {
 
         // 兜底：部分定制系统划掉后台时可能不回调 onTaskRemoved，直接杀进程或走 onDestroy。
         // 此时同样显式释放特权进程，避免 UserService 残留在 Shizuku/Sui 中。
-        releaseTerminalBlocking()
+        releaseTerminal()
         store.cancel()
     }
 
