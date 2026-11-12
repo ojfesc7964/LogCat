@@ -37,10 +37,15 @@ jobs:
           distribution: oracle
           cache: 'gradle'
 
-      - name: Decode Keystore
+
+      - name: Detect Keystore Type
         run: |
-          mkdir -p app/keystore
-          echo "${{ secrets.KEY_STORE_BASE64 }}" | base64 --decode > app/keystore/main.jks
+          MAGIC=$(od -An -tx1 -N4 app/keystore/main.jks | tr -d ' \n')
+          if [ "$MAGIC" = "feedfeed" ]; then
+            echo "KEY_STORE_TYPE=JKS" >> "$GITHUB_ENV"
+          else
+            echo "KEY_STORE_TYPE=PKCS12" >> "$GITHUB_ENV"
+          fi
 
       - name: Build APK
         run: bash ./gradlew :app:assembleRelease --stacktrace --no-daemon
